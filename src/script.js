@@ -9,10 +9,6 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
  * Base
  */
 // Debug
-const gui = new dat.GUI({
-    width: 400
-})
-
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
 
@@ -27,14 +23,11 @@ const textureLoader = new THREE.TextureLoader()
 
 // Draco loader
 const dracoLoader = new DRACOLoader()
-dracoLoader.setDecoderPath('draco/')
 
 // GLTF loader
 const gltfLoader = new GLTFLoader()
 gltfLoader.setDRACOLoader(dracoLoader)
 
-// Textures
-// Baked Texture
 const bakedTexture = textureLoader.load('baked.jpg')
 bakedTexture.flipY = false
 bakedTexture.encoding = THREE.sRGBEncoding
@@ -93,9 +86,9 @@ window.addEventListener('resize', () =>
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(45, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 4
-camera.position.y = 2
-camera.position.z = 4
+// Place the camera in front of the model, looking at the origin
+camera.position.set(-7, 6, 4)
+camera.lookAt(0, 1, 0)
 scene.add(camera)
 
 // Controls
