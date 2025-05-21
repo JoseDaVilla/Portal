@@ -91,7 +91,7 @@ for (let i = 0; i < firefliesCount; i++) {
 
 // Material
 // Adjust fireflies size for mobile
-const defaultFirefliesSize = isMobile ? 400 : 500;
+const defaultFirefliesSize = isMobile ? 300 : 500;
 
 const firefliesMaterial = new THREE.ShaderMaterial({
     uniforms: {
