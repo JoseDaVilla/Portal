@@ -9,8 +9,9 @@ import firefliesFragmentShader from './shaders/fireflies/fragment.glsl'
 import portalVertexShader from './shaders/portal/vertex.glsl'
 import portalFragmentShader from './shaders/portal/fragment.glsl'
 
-console.log(firefliesVertexShader,
-    firefliesFragmentShader)
+// Mobile detection
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
 
 /**
  * Base
@@ -18,19 +19,65 @@ console.log(firefliesVertexShader,
 
 const debugObject = {}
 const gui = new dat.GUI({
-    width: 400
+    width: isMobile ? 200 : 400,
+    closed: true, // Make sure controls start closed
+    autoPlace: true
 })
+
+// Hide GUI by default and add toggle button for all devices
+gui.domElement.style.display = "none";
+const guiVisible = false;
+
+// Add a more visible and consistent toggle button for all devices
+const guiToggle = document.createElement('button');
+guiToggle.innerHTML = "Settings";
+guiToggle.style.position = "absolute";
+guiToggle.style.bottom = "10px";
+guiToggle.style.right = "10px";
+guiToggle.style.zIndex = "1000";
+guiToggle.style.padding = "8px";
+guiToggle.style.backgroundColor = "#2c2c2c";
+guiToggle.style.color = "white";
+guiToggle.style.border = "none";
+guiToggle.style.borderRadius = "4px";
+guiToggle.style.cursor = "pointer";
+guiToggle.style.fontFamily = "Arial, sans-serif";
+guiToggle.style.fontSize = isMobile ? "12px" : "14px";
+guiToggle.addEventListener('click', () => {
+    if (gui.domElement.style.display === "none") {
+        gui.domElement.style.display = "block";
+        gui.open();
+    } else {
+        gui.domElement.style.display = "none";
+        gui.close();
+    }
+});
+document.body.appendChild(guiToggle);
+
+// Also allow keyboard shortcut 'h' to toggle GUI on desktop
+if (!isMobile) {
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'h') {
+            if (gui.domElement.style.display === "none") {
+                gui.domElement.style.display = "block";
+                gui.open();
+            } else {
+                gui.domElement.style.display = "none";
+                gui.close();
+            }
+        }
+    });
+}
 
 const canvas = document.querySelector('canvas.webgl')
 
-
 const scene = new THREE.Scene()
-
 
 // fireflies
 
 const firefliesGeometry = new THREE.BufferGeometry()
-const firefliesCount = 30
+// Reduce firefly count on mobile for better performance
+const firefliesCount = isMobile ? 15 : 30
 const positionArray = new Float32Array(firefliesCount * 3)
 const scaleArray = new Float32Array(firefliesCount)
 
@@ -43,12 +90,14 @@ for (let i = 0; i < firefliesCount; i++) {
 }
 
 // Material
+// Adjust fireflies size for mobile
+const defaultFirefliesSize = isMobile ? 200 : 350;
 
 const firefliesMaterial = new THREE.ShaderMaterial({
     uniforms: {
         uTime: { value: 0 },
         uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
-        uSize: { value: 350 }
+        uSize: { value: defaultFirefliesSize }
     },
     vertexShader: firefliesVertexShader,
     fragmentShader: firefliesFragmentShader,
@@ -143,19 +192,25 @@ const sizes = {
 }
 
 window.addEventListener('resize', () => {
-
+    const newIsMobile = window.innerWidth < 768;
+    
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
-
 
     camera.aspect = sizes.width / sizes.height
     camera.updateProjectionMatrix()
 
-
     renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Lower pixel ratio on mobile for performance
+    const pixelRatio = Math.min(newIsMobile ? 1.5 : 2, window.devicePixelRatio);
+    renderer.setPixelRatio(pixelRatio)
 
-    firefliesMaterial.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
+    firefliesMaterial.uniforms.uPixelRatio.value = pixelRatio
+    
+    // Adjust camera position on resize if device type changes
+    if (newIsMobile !== isMobile) {
+        updateCameraForDevice(newIsMobile);
+    }
 })
 
 /**
@@ -164,23 +219,42 @@ window.addEventListener('resize', () => {
 
 const camera = new THREE.PerspectiveCamera(45, sizes.width / sizes.height, 0.1, 100)
 
-camera.position.set(-7, 6, 4)
-camera.lookAt(0, 1, 0)
-scene.add(camera)
+// Function to position camera properly depending on device
+function updateCameraForDevice(mobileDevice) {
+    if (mobileDevice) {
+        // Move camera further back for mobile to see more scene
+        camera.position.set(-8, 5.5, 2.5); 
+    } else {
+        camera.position.set(-7, 6, 4);
+    }
+    camera.lookAt(0, 1, 0);
+}
 
+// Set initial camera position based on device
+updateCameraForDevice(isMobile);
+scene.add(camera)
 
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+// Set appropriate control settings for touch
+if (isMobile) {
+    controls.rotateSpeed = 0.7;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 0.5;
+    controls.enablePan = false; // Disable panning on mobile for simpler controls
+    controls.maxPolarAngle = Math.PI * 0.85; // Prevent going below the ground
+}
 
 /**
  * Renderer
  */
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
-    antialias: true
+    antialias: !isMobile // Disable antialiasing on mobile for performance
 })
 renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+// Use lower pixel ratio on mobile
+renderer.setPixelRatio(Math.min(isMobile ? 1.5 : 2, window.devicePixelRatio))
 renderer.outputEncoding = THREE.sRGBEncoding
 debugObject.clearColor = '#6e70af'
 
